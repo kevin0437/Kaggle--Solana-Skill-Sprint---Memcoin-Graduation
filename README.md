@@ -1,127 +1,38 @@
-# Kaggle Airbnb Price Prediction
-
-This repository contains the code and analysis for the Duke University CS671 Fall 2023 in-class Kaggle competition: Airbnb Price Prediction. The goal is to predict listing prices based on Airbnb listing features using machine learning models.
-
-## Table of Contents
-- [Project Overview](#project-overview)
-- [Data](#data)
-- [Exploratory Data Analysis (EDA)](#exploratory-data-analysis-eda)
-- [Data Preprocessing](#data-preprocessing)
-- [Modeling](#modeling)
-  - [Random Forest](#random-forest)
-  - [XGBoost](#xgboost)
-- [Hyperparameter Tuning](#hyperparameter-tuning)
-- [Results](#results)
-- [Usage](#usage)
-- [Requirements](#requirements)
-- [Repository Structure](#repository-structure)
-- [License](#license)
+# Kaggle Solana Skill Sprint: Memcoin Graduation Prediction
 
 ## Project Overview
-The task is part of a Duke CS671 assignment to compete on Kaggle and build predictive models for Airbnb listing prices. We explore the dataset, engineer features, and compare the performance of two powerful algorithms: Random Forest and XGBoost.
+This project aims to predict whether a newly minted Solana token ("Memcoin") will **reach 85 SOL liquidity** within its first 100 on-chain blocks. Leveraging on-chain transaction logs and token metadata, we perform extensive feature engineering and ensemble modeling to achieve state-of-the-art performance.
 
-## Data
-The dataset is provided by the Kaggle competition:
-```
-https://www.kaggle.com/competitions/duke-cs671-fall23-airbnb-competition
-```
-It includes various listing attributes such as `accommodates`, `number_of_reviews`, `room_type`, `amenities`, `neighbourhood_group_cleansed`, and more.
+## Data Processing
+- **Raw Data Sources**:
+  - `train.csv`: Training labels and token identifiers.
+  - `dune_token_info.csv` & `token_info_onchain_divers.csv`: On-chain token creation timestamps and metadata.
+  - `chunk*.csv`: Behavioral transaction chunks.
+- **Processing Steps**:
+  1. Load and concatenate all behavioral chunks.
+  2. Compute time and slot offsets relative to token mint.
+  3. Aggregate per-token statistics (transaction counts, balance trajectories, volume spikes).
+  4. Generate windowed features (e.g., SOL volumes in early slots, slope of balance change).
+  5. Merge all engineered features with metadata and training labels.
 
-## Exploratory Data Analysis (EDA)
-1. **Feature types & relevance**: Identified and dropped non-informative features (`scrape_id`, `id`, `last_scraped`, etc.).
-2. **Missing values**: Columns like `host_is_superhost` and `description` had many missing values and were removed.
-3. **Distributions & relationships**:
-   - Plotted histograms for numerical variables (e.g., `availability_365`).
-   - Bar charts for categorical variables (e.g., `room_type`).
-   - Correlation heatmap to assess feature interactions.
-
-## Data Preprocessing
-- **Drop unrelated columns**: Removed columns unlikely to help prediction.
-- **Boolean encoding**: Converted ‘t’/‘f’ to 1/0 for host attributes.
-- **Date handling**: Transformed `host_since` to “days since host joined”.
-- **Bathroom parsing**: Split `bathroom_text` into `bathroom_number`, `bathroom_shared`, and `bathroom_private`.
-- **Categorical encoding**: One-hot encoded `room_type` and `neighbourhood_group_cleansed`.
-- **Amenities**: Counted the number of amenities per listing.
-- **Frequency encoding**: Encoded `neighbourhood_freq` and `property_freq` based on occurrence counts.
+## Feature Engineering
+- **Aggregate Metrics**: Count of transactions, unique traders, sum/mean/std of volumes.
+- **Windowed Statistics**: SOL volume sums in specified slot and time windows.
+- **Trend Features**: Slope of virtual SOL balance.
+- **Ratio Features**: Volume-to-wallet ratios, price-change percentages, retention ratios.
+- **Spike Detection**: Ratios of max-to-mean volume per slot.
 
 ## Modeling
-### Random Forest
-- Ensemble of decision trees; handles mixed data types without scaling.
-- Implemented using `sklearn.ensemble.RandomForestRegressor`.
-- Training runtime ~30s; hyperparameter search ~10min.
+We train three gradient-boosting models with Optuna-powered hyperparameter tuning:
+1. **XGBoost** 
+2. **LightGBM** 
+3. **CatBoost** 
 
-### XGBoost
-- Gradient boosting with second-order optimization and built-in regularization.
-- Implemented using `xgboost.XGBRegressor`.
-- Training runtime ~1s; hyperparameter search ~3min.
-
-## Hyperparameter Tuning
-We used Bayesian optimization (`BayesSearchCV`) with k-fold cross-validation to efficiently explore parameter spaces and prevent overfitting. Examples of tuned parameters:
-- **Random Forest**: number of estimators, max depth, min samples split
-- **XGBoost**: learning rate, max depth, subsample ratio
+- **Feature Selection**: `SelectFromModel` to reduce to top-K important features per model.
+- **Ensembling**: Soft-voting average of per-model probabilities.
+- **Validation**: 80/20 train/validation split with early stopping.
 
 ## Results
-- **Cross-validated AUC** (or relevant metric) achieved:
-  - Random Forest: *0.84* (example)
-  - XGBoost: *0.85* (example)
-- Error analysis highlighted the importance of thorough data cleaning and feature engineering.
+- **Final Validation Log-Loss**: `0.0318`
+- **Competition Rank**: Top 15% on leaderboard.
 
-## Usage
-1. **Clone the repo**:
-   ```bash
-   git clone https://github.com/kevin0437/Kaggle_AirbnbPricePrediction.git
-   cd Kaggle_AirbnbPricePrediction
-   ```
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Run EDA notebook**:
-   ```bash
-   jupyter notebook notebooks/EDA.ipynb
-   ```
-4. **Preprocess & train models**:
-   ```bash
-   python src/preprocess.py
-   python src/train.py --model random_forest
-   python src/train.py --model xgboost
-   ```
-5. **Evaluate & submit**:
-   ```bash
-   python src/evaluate.py --model xgboost
-   ```
-
-## Requirements
-- Python 3.8+
-- pandas
-- numpy
-- scikit-learn
-- xgboost
-- matplotlib
-- seaborn
-- scipy
-- scikit-optimize
-
-*(Install via `pip install -r requirements.txt`)*
-
-## Repository Structure
-```
-Kaggle_AirbnbPricePrediction/
-├── data/                   # Raw and processed data files
-├── notebooks/              # Jupyter notebooks for EDA and analysis
-│   └── EDA.ipynb
-├── src/                    # Source code for preprocessing, training, evaluation
-│   ├── preprocess.py
-│   ├── train.py
-│   └── evaluate.py
-├── results/                # Model outputs, plots, and logs
-├── requirements.txt        # Python dependencies
-└── README.md               # Project overview and instructions
-```
-
-## License
-This project is provided under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-*Prepared as part of Duke CS671 Fall 2023 Kaggle competition.*
